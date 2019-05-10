@@ -20,3 +20,22 @@ export const onOrderCreated = functions.database.ref('/orders/{orderId}').onCrea
   }
   return Promise.resolve();
 });
+
+export const onBikerAssignedCreated = functions.database.ref('/orders/{orderId}').onUpdate(change => {
+  const before = change.before.val();
+  const beforeStatus = before.status;
+  const after = change.after.val();
+  const afterStatus = after.status;
+  if (beforeStatus === 'pending' && afterStatus === 'preparing') {
+    const topic = `${after.bikerId}.order.new`;
+    console.log(`sending to topic ${topic}`);
+    return admin.messaging().sendToTopic(topic, {
+      notification: {
+        title: 'New order arrived!'
+      }
+    }, {
+      priority: 'high'
+    });
+  }
+  return Promise.resolve();
+});
