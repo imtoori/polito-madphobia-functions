@@ -3,31 +3,34 @@ import * as admin from 'firebase-admin';
 
 admin.initializeApp(functions.config().firebase);
 
-const sendNotification = async (topic: string, title: string, action?: string) => {
+const sendNotification = async (topic: string, title: string, action: string, data: string) => {
   console.log(`sending to topic ${topic}`);
   return admin.messaging().sendToTopic(topic, {
     notification: {
       title: title,
-      clickAction: action
+      clickAction: action,
     },
+    data: {
+      extra: data
+    }
   }, {
     priority: 'high',
   });
 };
 
-export const onOrderCreated = functions.database.ref('/orders/{orderId}').onCreate(async snapshot => {
+export const onOrderCreated = functions.database.ref('/orders/{orderId}').onCreate(async (snapshot, context) => {
   const val = snapshot.val();
   const restaurantId = val.restaurantId;
 
   await admin.database().ref(`/users/restaurants/${restaurantId}/badge`).set(true);
   console.log(`restaurant: ${restaurantId}`);
   if (restaurantId) {
-    return sendNotification(`${restaurantId}.order.new`, 'New order arrived!');
+    return sendNotification(`${restaurantId}.order.new`, 'New order arrived!', 'open_order', context.params.orderId);
   }
   return Promise.resolve();
 });
 
-export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpdate(async change => {
+export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpdate(async (change, context) => {
   const before = change.before.val();
   const beforeStatus = before.status;
   const after = change.after.val();
@@ -36,22 +39,22 @@ export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpda
 
   switch (afterStatus) {
     case 'preparing':
-      await sendNotification(`${clientId}.order.status`, 'The restaurant is preparing your order!', 'open_order');
+      await sendNotification(`${clientId}.order.status`, 'The restaurant is preparing your order!', 'open_order', context.params.orderId);
       break;
     case 'ready':
-      await sendNotification(`${clientId}.order.status`, 'Your order is ready to pick up!', 'open_order');
+      await sendNotification(`${clientId}.order.status`, 'Your order is ready to pick up!', 'open_order', context.params.orderId);
       break;
     case 'completed':
-      await sendNotification(`${clientId}.order.status`, 'Your order has left the restaurant!', 'open_order');
+      await sendNotification(`${clientId}.order.status`, 'Your order has left the restaurant!', 'open_order', context.params.orderId);
       break;
     case 'delivered':
-      await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'open_order');
+      await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'open_order', context.params.orderId);
       break;
   }
 
   if (beforeStatus === 'pending' && afterStatus === 'preparing') {
     await admin.database().ref(`/users/restaurants/${after.bikerId}/badge`).set(true);
-    return sendNotification(`${after.bikerId}.order.new`, 'New order arrived!');
+    return sendNotification(`${after.bikerId}.order.new`, 'New order arrived!', 'open_order', context.params.orderId);
   }
   return Promise.resolve();
 });
