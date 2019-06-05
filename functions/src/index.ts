@@ -50,7 +50,7 @@ export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpda
       await sendNotification(`${clientId}.order.status`, 'Your order has left the restaurant!', 'open_order', context.params.orderId);
       break;
     case 'delivered':
-      await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'rate_order', context.params.orderId);
+      await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'open_order', context.params.orderId);
       break;
   }
 
