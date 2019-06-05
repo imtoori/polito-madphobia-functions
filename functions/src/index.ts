@@ -22,10 +22,12 @@ export const onOrderCreated = functions.database.ref('/orders/{orderId}').onCrea
   const val = snapshot.val();
   const restaurantId = val.restaurantId;
 
+  const user = val.client;
+
   await admin.database().ref(`/users/restaurants/${restaurantId}/badge`).set(true);
   console.log(`restaurant: ${restaurantId}`);
   if (restaurantId) {
-    return sendNotification(`${restaurantId}.order.new`, 'New order arrived!', 'open_order', context.params.orderId);
+    return sendNotification(`${restaurantId}.order.new`, `You have received a new order from ${user.name} for ${new Date(val.orderFor).toTimeString()}`, 'open_order', context.params.orderId);
   }
   return Promise.resolve();
 });
@@ -48,13 +50,14 @@ export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpda
       await sendNotification(`${clientId}.order.status`, 'Your order has left the restaurant!', 'open_order', context.params.orderId);
       break;
     case 'delivered':
-      await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'open_order', context.params.orderId);
+      await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'rate_order', context.params.orderId);
       break;
   }
 
   if (beforeStatus === 'pending' && afterStatus === 'preparing') {
+    const restaurant = after.restaurant;
     await admin.database().ref(`/users/restaurants/${after.bikerId}/badge`).set(true);
-    return sendNotification(`${after.bikerId}.order.new`, 'New order arrived!', 'open_order', context.params.orderId);
+    return sendNotification(`${after.bikerId}.order.new`, `The restaurant ${restaurant.previewInfo.name} assigned a new order to you!`, 'open_order', context.params.orderId);
   }
   return Promise.resolve();
 });
