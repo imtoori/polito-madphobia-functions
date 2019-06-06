@@ -6,12 +6,10 @@ admin.initializeApp(functions.config().firebase);
 const sendNotification = async (topic: string, title: string, action: string, data: string) => {
   console.log(`sending to topic ${topic}`);
   return admin.messaging().sendToTopic(topic, {
-    notification: {
+    data: {
+      extra: data,
       title: title,
       clickAction: action,
-    },
-    data: {
-      extra: data
     }
   }, {
     priority: 'high',
@@ -27,7 +25,9 @@ export const onOrderCreated = functions.database.ref('/orders/{orderId}').onCrea
   await admin.database().ref(`/users/restaurants/${restaurantId}/badge`).set(true);
   console.log(`restaurant: ${restaurantId}`);
   if (restaurantId) {
-    return sendNotification(`${restaurantId}.order.new`, `You have received a new order from ${user.name} for ${new Date(val.orderFor).toTimeString()}`, 'open_order', context.params.orderId);
+    const date = new Date(val.orderFor);
+    date.setHours(date.getHours() + 2);
+    return sendNotification(`${restaurantId}.order.new`, `You have received a new order from ${user.name} for ${date.toTimeString()}`, 'open_order', context.params.orderId);
   }
   return Promise.resolve();
 });
