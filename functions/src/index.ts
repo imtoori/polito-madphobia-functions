@@ -46,7 +46,10 @@ export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpda
             await sendNotification(`${clientId}.order.status`, 'Update about your order!', 'The restaurant is preparing your order!', 'open_order', context.params.orderId);
             break;
           case 'ready':
-            await sendNotification(`${clientId}.order.status`, 'Update about your order!', 'Your order is ready to pick up!', 'open_order', context.params.orderId);
+            await Promise.all([
+              sendNotification(`${clientId}.order.status`, 'Update about your order!', 'Your order is ready to pick up!', 'open_order', context.params.orderId),
+              sendNotification(`${after.bikerId}.order.new`, 'Update about your order!', 'Your order is ready to pick up!', 'open_order', context.params.orderId)
+            ]);
             break;
           case 'completed':
             await sendNotification(`${clientId}.order.status`, 'Update about your order!', 'Your order has left the restaurant!', 'open_order', context.params.orderId);
