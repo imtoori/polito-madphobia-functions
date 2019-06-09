@@ -33,31 +33,33 @@ export const onOrderCreated = functions.database.ref('/orders/{orderId}').onCrea
 });
 
 export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpdate(async (change, context) => {
-  const before = change.before.val();
-  const beforeStatus = before.status;
-  const after = change.after.val();
-  const afterStatus = after.status;
-  const clientId = after.client.id;
+      const before = change.before.val();
+      const after = change.after.val();
+      const beforeStatus = before.status;
+      const afterStatus = after.status;
+      const clientId = after.client.id;
 
-  switch (afterStatus) {
-    case 'preparing':
-      await sendNotification(`${clientId}.order.status`, 'The restaurant is preparing your order!', 'open_order', context.params.orderId);
-      break;
-    case 'ready':
-      await sendNotification(`${clientId}.order.status`, 'Your order is ready to pick up!', 'open_order', context.params.orderId);
-      break;
-    case 'completed':
-      await sendNotification(`${clientId}.order.status`, 'Your order has left the restaurant!', 'open_order', context.params.orderId);
-      break;
-    case 'delivered':
-      await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'open_order', context.params.orderId);
-      break;
-  }
+      if (beforeStatus !== afterStatus) {
+        switch (afterStatus) {
+          case 'preparing':
+            await sendNotification(`${clientId}.order.status`, 'The restaurant is preparing your order!', 'open_order', context.params.orderId);
+            break;
+          case 'ready':
+            await sendNotification(`${clientId}.order.status`, 'Your order is ready to pick up!', 'open_order', context.params.orderId);
+            break;
+          case 'completed':
+            await sendNotification(`${clientId}.order.status`, 'Your order has left the restaurant!', 'open_order', context.params.orderId);
+            break;
+          case 'delivered':
+            await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'open_order', context.params.orderId);
+            break;
+        }
+      }
 
-  if (beforeStatus === 'pending' && afterStatus === 'preparing') {
-    const restaurant = after.restaurant;
-    await admin.database().ref(`/users/restaurants/${after.bikerId}/badge`).set(true);
-    return sendNotification(`${after.bikerId}.order.new`, `The restaurant ${restaurant.previewInfo.name} assigned a new order to you!`, 'open_order', context.params.orderId);
-  }
-  return Promise.resolve();
-});
+      if (!before.bikerId && after.bikerId) {
+        const restaurant = after.restaurant;
+        return sendNotification(`${after.bikerId}.order.new`, `The restaurant ${restaurant.previewInfo.name} assigned a new order to you!`, 'open_order', context.params.orderId);
+      }
+      return Promise.resolve();
+    }
+);
