@@ -3,12 +3,13 @@ import * as admin from 'firebase-admin';
 
 admin.initializeApp(functions.config().firebase);
 
-const sendNotification = async (topic: string, title: string, action: string, data: string) => {
+const sendNotification = async (topic: string, title: string, message: string, action: string, data: string) => {
   console.log(`sending to topic ${topic}`);
   return admin.messaging().sendToTopic(topic, {
     data: {
       extra: data,
       title: title,
+      message: message,
       clickAction: action,
     }
   }, {
@@ -27,7 +28,7 @@ export const onOrderCreated = functions.database.ref('/orders/{orderId}').onCrea
   if (restaurantId) {
     const date = new Date(val.orderFor);
     date.setHours(date.getHours() + 2);
-    return sendNotification(`${restaurantId}.order.new`, `You have received a new order from ${user.name} for ${date.toTimeString()}`, 'open_order', context.params.orderId);
+    return sendNotification(`${restaurantId}.order.new`, 'New order!', `You have received a new order from ${user.name} for ${date.toTimeString()}`, 'open_order', context.params.orderId);
   }
   return Promise.resolve();
 });
@@ -42,23 +43,23 @@ export const onOrderUpdated = functions.database.ref('/orders/{orderId}').onUpda
       if (beforeStatus !== afterStatus) {
         switch (afterStatus) {
           case 'preparing':
-            await sendNotification(`${clientId}.order.status`, 'The restaurant is preparing your order!', 'open_order', context.params.orderId);
+            await sendNotification(`${clientId}.order.status`, 'Update about your order!', 'The restaurant is preparing your order!', 'open_order', context.params.orderId);
             break;
           case 'ready':
-            await sendNotification(`${clientId}.order.status`, 'Your order is ready to pick up!', 'open_order', context.params.orderId);
+            await sendNotification(`${clientId}.order.status`, 'Update about your order!', 'Your order is ready to pick up!', 'open_order', context.params.orderId);
             break;
           case 'completed':
-            await sendNotification(`${clientId}.order.status`, 'Your order has left the restaurant!', 'open_order', context.params.orderId);
+            await sendNotification(`${clientId}.order.status`, 'Update about your order!', 'Your order has left the restaurant!', 'open_order', context.params.orderId);
             break;
           case 'delivered':
-            await sendNotification(`${clientId}.order.status`, 'Enjoy your meal! And rate your experience!', 'open_order', context.params.orderId);
+            await sendNotification(`${clientId}.order.status`, 'Order delivered!', 'Enjoy your meal! And rate your experience!', 'open_order', context.params.orderId);
             break;
         }
       }
 
       if (!before.bikerId && after.bikerId) {
         const restaurant = after.restaurant;
-        return sendNotification(`${after.bikerId}.order.new`, `The restaurant ${restaurant.previewInfo.name} assigned a new order to you!`, 'open_order', context.params.orderId);
+        return sendNotification(`${after.bikerId}.order.new`, 'New order!', `The restaurant ${restaurant.previewInfo.name} assigned a new order to you!`, 'open_order', context.params.orderId);
       }
       return Promise.resolve();
     }
